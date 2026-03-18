@@ -1,0 +1,421 @@
+import { supabase } from "@/lib/supabase"
+
+export async function POST(req: Request) {
+
+try{
+
+const body = await req.json()
+
+/* PRODUCT NAME */
+let product: string =
+(body.product && body.product !== "Product" && !body.product.toLowerCase().includes("aliexpress"))
+? body.product
+: (body.title && body.title.length > 5 ? body.title : "Product")
+
+const niche: string = body.niche || "general"
+let images: string[] = body.images || []
+const price: string = body.price || "$29.99"
+const storeName: string = body.storeName || "Sarphe Store"
+
+/* CLEAN PRODUCT TITLE */
+product = product.split(" ").slice(0,4).join(" ")
+
+/* SLUG */
+const slug = product
+.toLowerCase()
+.replace(/[^a-z0-9\s]/g, "")
+.replace(/\s+/g, "-")
+
+/* 🔥 IMAGE NORMALIZATION + HD FIX */
+images = (images || [])
+.filter((img: string) => img && img.trim() !== "")
+.map((img: string) => {
+
+let fixed = img.trim()
+
+if (fixed.startsWith("//")) fixed = "https:" + fixed
+if (fixed.startsWith("http://")) fixed = fixed.replace("http://","https://")
+if (!fixed.startsWith("http")) fixed = "https://" + fixed
+
+// 🔥 FORCE HD
+fixed = fixed
+.replace(/_\d+x\d+/g, "_1000x1000")
+.replace(/\.jpg_.*/, ".jpg")
+.replace(/\.png_.*/, ".png")
+.replace(/\.webp_.*/, ".webp")
+
+return fixed
+})
+
+/* REMOVE DUPLICATES */
+images = [...new Set(images)]
+
+/* 🔥 HARD FILTER */
+const cleanImages = images.filter((img:string)=>
+img &&
+img.startsWith("http") &&
+!img.includes("icon") &&
+!img.includes("logo") &&
+!img.includes("avatar") &&
+!img.includes("svg") &&
+!img.includes("sprite") &&
+!img.includes("lazy") &&
+!img.includes("placeholder") &&
+!img.includes("thumbnail") &&
+!img.includes("small") &&
+!img.includes("banner") &&
+!img.includes("ads") &&
+!img.includes("strip") &&
+!img.includes("background")
+)
+
+/* 🔥 SMART IMAGE SCORING */
+function scoreImage(url:string){
+
+let score = 0
+
+if(url.includes("alicdn")) score += 50
+if(url.includes("cdn.shopify")) score += 50
+if(url.includes("ae01")) score += 40
+
+if(url.match(/(\d{3,4}x\d{3,4})/)) score += 30
+if(url.includes("800")) score += 25
+if(url.includes("1000")) score += 30
+
+if(url.includes("icon")) score -= 100
+if(url.includes("logo")) score -= 100
+if(url.includes("sprite")) score -= 100
+if(url.includes("thumb")) score -= 60
+if(url.includes("small")) score -= 60
+if(url.includes("lazy")) score -= 40
+if(url.includes("placeholder")) score -= 80
+
+if(url.endsWith(".jpg") || url.endsWith(".jpeg")) score += 10
+if(url.endsWith(".webp")) score += 8
+
+return score
+}
+
+let rankedImages = cleanImages
+.map(img => ({ url: img, score: scoreImage(img) }))
+.sort((a,b)=> b.score - a.score)
+.map(i => i.url)
+
+/* 🔥 HERO IMAGE (SMART PICK) */
+const image =
+rankedImages.find(img => img.includes("1000")) ||
+rankedImages[0] ||
+rankedImages[1] ||
+rankedImages[2] ||
+"https://images.unsplash.com/photo-1601758064221-0c5f8bcb0d5d"
+
+/* FINAL GALLERY */
+images = rankedImages.slice(0, 20)
+
+/* GLOBAL STYLE */
+const baseStyle = `
+<style>
+
+body{
+font-family:Inter,system-ui;
+background:#020617;
+color:#f8fafc;
+margin:0;
+}
+
+section{
+padding:90px 20px;
+}
+
+h1,h2,h3{
+margin-bottom:16px;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+}
+
+button{
+cursor:pointer;
+}
+
+.primary-btn{
+background:linear-gradient(135deg,#2563eb,#38bdf8);
+border:none;
+color:white;
+padding:16px 32px;
+border-radius:10px;
+font-weight:600;
+font-size:16px;
+margin-right:10px;
+}
+
+.secondary-btn{
+background:#0f172a;
+border:1px solid #38bdf8;
+color:#38bdf8;
+padding:16px 32px;
+border-radius:10px;
+font-weight:600;
+font-size:16px;
+}
+
+/* 🔥 HERO LAYOUT */
+.hero-inner{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:60px;
+align-items:center;
+}
+
+.hero-img{
+display:flex;
+justify-content:center;
+align-items:center;
+}
+
+.hero-img img{
+width:100%;
+max-width:520px;
+height:auto;
+object-fit:contain;
+border-radius:20px;
+display:block;
+
+/* 🔥 QUALITY BOOST */
+image-rendering:auto;
+filter: contrast(1.05) saturate(1.05);
+}
+
+/* 🔥 GALLERY FIX */
+.gallery-grid{
+display:flex;
+flex-wrap:wrap;
+gap:20px;
+justify-content:center;
+}
+
+.gallery-grid img{
+width:260px;
+height:260px;
+object-fit:cover;
+border-radius:14px;
+transition:0.3s;
+image-rendering:auto;
+}
+
+.gallery-grid img:hover{
+transform:scale(1.05);
+}
+
+.review-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:20px;
+}
+
+.benefit-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:20px;
+}
+
+.feature-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:20px;
+}
+
+.store-header{
+background:#020617;
+border-bottom:1px solid #1e293b;
+padding:20px;
+}
+
+.header-inner{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.logo{
+font-weight:700;
+font-size:20px;
+}
+
+.nav a{
+margin-left:20px;
+text-decoration:none;
+color:#f8fafc;
+}
+
+</style>
+`
+
+/* HEADER */
+const header = `
+${baseStyle}
+<header class="store-header">
+<div class="container header-inner">
+<div class="logo">${storeName}</div>
+<nav class="nav">
+<a href="#">Home</a>
+<a href="#">Shop</a>
+<a href="#">Contact</a>
+<a href="#">Cart</a>
+</nav>
+</div>
+</header>
+`
+
+/* HERO */
+const hero = `
+<section class="hero-${slug}">
+<div class="container hero-inner">
+<div class="hero-text">
+<h1>${product}</h1>
+<p class="price">${price}</p>
+<p>
+Experience the comfort of our premium ${product}, crafted for modern ${niche} lovers.
+</p>
+<button class="primary-btn">Add To Cart</button>
+<button class="secondary-btn">Buy Now</button>
+</div>
+<div class="hero-img">
+<img src="${image}" loading="eager" onerror="this.src='https://via.placeholder.com/500'"/>
+</div>
+</div>
+</section>
+`
+
+/* GALLERY */
+const galleryImages =
+(images && images.length > 0)
+? images.map((img:string)=>
+  `<img src="${img}" loading="lazy" onerror="this.src='https://via.placeholder.com/300'"/>`
+).join("")
+: `<img src="${image}" />`
+
+const gallery = `
+<section>
+<div class="container">
+<h2>Product Gallery</h2>
+<div class="gallery-grid">
+${galleryImages}
+</div>
+</div>
+</section>
+`
+
+/* REST */
+const socialProof = `
+<section>
+<div class="container" style="text-align:center;font-weight:600;font-size:18px">
+⭐ 4.9 / 5 rating from 1,700+ customers
+</div>
+</section>
+`
+
+const benefits = `
+<section>
+<div class="container">
+<h2>Why Choose Our ${product}</h2>
+<div class="benefit-grid">
+<div>Premium ${product} design</div>
+<div>Built for maximum ${niche} performance</div>
+<div>Trusted by thousands of customers</div>
+<div>Designed for long lasting comfort</div>
+</div>
+</div>
+</section>
+`
+
+const features = `
+<section>
+<div class="container">
+<h2>Built To Last</h2>
+<div class="feature-grid">
+<div><h3>Comfort Design</h3><p>Engineered for better experience.</p></div>
+<div><h3>Premium Materials</h3><p>High durability build.</p></div>
+<div><h3>Modern Style</h3><p>Fits your setup perfectly.</p></div>
+</div>
+</div>
+</section>
+`
+
+const reviews = `
+<section>
+<div class="container">
+<h2>Customer Reviews</h2>
+<div class="review-grid">
+<div>★★★★★ Amazing quality</div>
+<div>★★★★★ Worth every dollar</div>
+<div>★★★★★ Highly recommended</div>
+</div>
+</div>
+</section>
+`
+
+const faq = `
+<section>
+<div class="container">
+<h2>FAQ</h2>
+<p><strong>Shipping?</strong><br>5-7 days</p>
+<p><strong>Refund?</strong><br>30-day guarantee</p>
+</div>
+</section>
+`
+
+const cta = `
+<section>
+<div class="container" style="text-align:center">
+<h2>Upgrade Your ${niche} Experience Today</h2>
+<button class="primary-btn">Add To Cart</button>
+<button class="secondary-btn">Buy Now</button>
+</div>
+</section>
+`
+
+await supabase.from("stores").insert([
+{
+user_id:"demo-user",
+product_name:product,
+price:price,
+store_html:JSON.stringify({
+header,
+hero,
+gallery,
+socialProof,
+benefits,
+features,
+reviews,
+faq,
+cta
+})
+}
+])
+
+return Response.json({
+header,
+hero,
+gallery,
+socialProof,
+benefits,
+features,
+reviews,
+faq,
+cta
+})
+
+}catch(err){
+
+console.error("API ERROR:",err)
+
+return Response.json({
+error:"Server failed"
+})
+
+}
+
+}

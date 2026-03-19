@@ -1,5 +1,44 @@
 import { supabase } from "@/lib/supabase"
 
+/* 🔥 NEW FEATURE: PRODUCT SCORING */
+function calculateScore(title:string, price:string, images:string[]){
+
+let score = 0
+
+const numericPrice = parseFloat(price)
+
+if(!isNaN(numericPrice)){
+  if(numericPrice >= 10 && numericPrice <= 60){
+    score += 25
+  }else{
+    score += 10
+  }
+}
+
+if(images.length >= 5) score += 25
+else if(images.length >= 3) score += 15
+else score += 5
+
+if(title.length > 20 && title.length < 80) score += 20
+else score += 10
+
+const viralWords = ["portable","smart","mini","pro","electric","automatic"]
+
+if(viralWords.some(word => title.toLowerCase().includes(word))){
+  score += 15
+}
+
+if(score > 100) score = 100
+
+let verdict = "Average Product"
+
+if(score >= 75) verdict = "🔥 Winning Product"
+else if(score >= 50) verdict = "⚡ Potential Product"
+else verdict = "❌ Weak Product"
+
+return { score, verdict }
+}
+
 export async function POST(req: Request) {
 
 try{
@@ -101,6 +140,36 @@ let rankedImages = cleanImages
 .sort((a,b)=> b.score - a.score)
 .map(i => i.url)
 
+/* 🔥 ADD: FORCE 4 PRODUCT GALLERY IMAGES */
+let finalImages = rankedImages.filter(img =>
+img &&
+!img.includes("icon") &&
+!img.includes("logo") &&
+!img.includes("sprite") &&
+!img.includes("gif") &&
+!img.includes("loading") &&
+!img.includes("placeholder") &&
+!img.includes("data:image") &&
+!img.includes("base64")
+)
+
+finalImages = finalImages.slice(0,4)
+
+if(finalImages.length < 4){
+
+const fallback = [
+"https://images.unsplash.com/photo-1583511655826-05700442b31b",
+"https://images.unsplash.com/photo-1601758125946-6ec2ef64daf8",
+"https://images.unsplash.com/photo-1583337130417-3346a1c8f6a6",
+"https://images.unsplash.com/photo-1558788353-f76d92427f16"
+]
+
+finalImages = [...finalImages, ...fallback].slice(0,4)
+}
+
+/* 🔥 NEW FEATURE: SCORING */
+const scoring = calculateScore(product, price, rankedImages)
+
 /* 🔥 HERO IMAGE (SMART PICK) */
 const image =
 rankedImages.find(img => img.includes("1000")) ||
@@ -110,7 +179,7 @@ rankedImages[2] ||
 "https://images.unsplash.com/photo-1601758064221-0c5f8bcb0d5d"
 
 /* FINAL GALLERY */
-images = rankedImages.slice(0, 20)
+images = finalImages
 
 /* GLOBAL STYLE */
 const baseStyle = `
@@ -152,13 +221,20 @@ margin-right:10px;
 }
 
 .secondary-btn{
-background:#0f172a;
-border:1px solid #38bdf8;
-color:#38bdf8;
+background:linear-gradient(135deg,#38bdf8,#6366f1);
+border:none;
+color:white;
 padding:16px 32px;
 border-radius:10px;
 font-weight:600;
 font-size:16px;
+box-shadow:0 8px 25px rgba(99,102,241,0.4);
+transition:0.25s;
+}
+
+.secondary-btn:hover{
+transform:scale(1.05);
+box-shadow:0 10px 30px rgba(99,102,241,0.6);
 }
 
 /* 🔥 HERO LAYOUT */
@@ -183,12 +259,10 @@ object-fit:contain;
 border-radius:20px;
 display:block;
 
-/* 🔥 QUALITY BOOST */
 image-rendering:auto;
 filter: contrast(1.05) saturate(1.05);
 }
 
-/* 🔥 GALLERY FIX */
 .gallery-grid{
 display:flex;
 flex-wrap:wrap;
@@ -276,6 +350,11 @@ const hero = `
 <div class="hero-text">
 <h1>${product}</h1>
 <p class="price">${price}</p>
+
+<div style="margin:10px 0;font-weight:600;color:#facc15">
+🔥 Score: ${scoring.score}/100 — ${scoring.verdict}
+</div>
+
 <p>
 Experience the comfort of our premium ${product}, crafted for modern ${niche} lovers.
 </p>
@@ -392,7 +471,9 @@ features,
 reviews,
 faq,
 cta
-})
+}),
+score: scoring.score,
+verdict: scoring.verdict
 }
 ])
 
@@ -405,7 +486,9 @@ benefits,
 features,
 reviews,
 faq,
-cta
+cta,
+score: scoring.score,
+verdict: scoring.verdict
 })
 
 }catch(err){

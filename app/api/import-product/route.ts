@@ -124,8 +124,8 @@ if(!content) return
 
 try{
 
-/* 🔥 ALIEXPRESS FIX */
-if(content.includes("runParams")){
+/* 🔥 ALIEXPRESS FIX (UPGRADED) */
+if(content.includes("runParams") || content.includes("window.runParams")){
 
 const match = content.match(/runParams\s*=\s*(\{[\s\S]*?\})\s*;/)
 
@@ -162,11 +162,13 @@ images.push(...product.imageModule.imageList.map((i:any)=>i?.url).filter(Boolean
 
 }
 
-/* EBAY */
+/* EBAY FIX (UPGRADED HD) */
 const ebayImages = content.match(/"imageUrl":"(https:[^"]+)"/g)
 if(ebayImages){
 ebayImages.forEach(img=>{
-images.push(img.replace(/"imageUrl":"|"/g,""))
+let clean = img.replace(/"imageUrl":"|"/g,"")
+clean = clean.replace(/s-l\d+/g,"s-l1600") // 🔥 force HD
+images.push(clean)
 })
 }
 
@@ -186,7 +188,7 @@ images.push(src)
 }
 })
 
-/* CLEAN */
+/* 🔥 ULTRA CLEAN + HD FIX */
 images = [...new Set(images)].map(img=>{
 let fixed = img.trim()
 
@@ -194,7 +196,8 @@ if(fixed.startsWith("//")) fixed = "https:" + fixed
 if(fixed.startsWith("http://")) fixed = fixed.replace("http://","https://")
 
 fixed = fixed
-.replace(/_\d+x\d+/g,"")
+.replace(/_\d+x\d+/g,"_1000x1000")
+.replace(/s-l\d+/g,"s-l1600")
 .replace(/\.jpg_.*/, ".jpg")
 .replace(/\.png_.*/, ".png")
 .replace(/\.webp_.*/, ".webp")
@@ -207,10 +210,23 @@ img.startsWith("http") &&
 !img.includes("logo") &&
 !img.includes("avatar") &&
 !img.includes("thumbnail") &&
-!img.includes("small")
+!img.includes("small") &&
+!img.includes("sprite") &&
+!img.includes("gif") &&
+!img.includes("loading") &&
+!img.includes("placeholder") &&
+!img.includes("data:image") &&
+!img.includes("base64")
 )
 
-/* 🧠 FALLBACK SYSTEM (ADDED HERE) */
+/* 🔥 REMOVE BLUR / LOW QUALITY */
+images = images.filter(img =>
+!img.includes("blur") &&
+!img.includes("lazy") &&
+!img.includes("default")
+)
+
+/* 🧠 FALLBACK SYSTEM */
 const isBadData =
 !title ||
 title.length < 5 ||
@@ -228,7 +244,7 @@ if(ogImg) images.push(ogImg)
 
 }
 
-/* 🔥 FORCE SAFE DATA */
+/* 🔥 FINAL SAFETY */
 if(images.length === 0){
 images.push("https://images.unsplash.com/photo-1601758064221-0c5f8bcb0d5d")
 }
@@ -237,9 +253,18 @@ if(!price){
 price = "$29.99"
 }
 
-/* SCORE */
+/* 🔥 FINAL CLEAN (REAL PRODUCT ONLY) */
 const finalImages = images.slice(0,6)
+
+/* SCORE */
 const scoring = calculateScore(title, price, finalImages)
+
+/* 🔥 UI COLOR SYSTEM (MATCH YOUR LANDING) */
+const theme = {
+primary: "#38bdf8",
+accent: "#6366f1",
+gradient: "linear-gradient(135deg,#38bdf8,#6366f1)"
+}
 
 return Response.json({
 title,
@@ -248,7 +273,8 @@ description,
 images: finalImages,
 score: scoring.score,
 verdict: scoring.verdict,
-reasons: scoring.reasons
+reasons: scoring.reasons,
+theme
 })
 
 }catch(error){

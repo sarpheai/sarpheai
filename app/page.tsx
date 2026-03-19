@@ -1,10 +1,19 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function Landing(){
 
 const router = useRouter()
+
+/* --------------------------- STATE (ANIMATION) --------------------------- */
+
+const [visible, setVisible] = useState(false)
+
+useEffect(()=>{
+  setTimeout(()=>setVisible(true), 200)
+},[])
 
 /* --------------------------- THEME --------------------------- */
 
@@ -32,7 +41,8 @@ const card = {
   background:"rgba(255,255,255,0.05)",
   padding:30,
   borderRadius:16,
-  border:"1px solid rgba(255,255,255,0.08)"
+  border:"1px solid rgba(255,255,255,0.08)",
+  transition:"all 0.3s ease"
 }
 
 const buttonPrimary = {
@@ -42,7 +52,8 @@ const buttonPrimary = {
   border:"none",
   color:"#fff",
   fontWeight:"700",
-  cursor:"pointer"
+  cursor:"pointer",
+  transition:"all 0.3s ease"
 }
 
 /* --------------------------- COMPONENT --------------------------- */
@@ -75,7 +86,10 @@ return (
   flexDirection:"column",
   alignItems:"center",
   justifyContent:"center",
-  textAlign:"center"
+  textAlign:"center",
+  opacity: visible ? 1 : 0,
+  transform: visible ? "translateY(0)" : "translateY(40px)",
+  transition:"all 0.8s ease"
 }}>
   <h1 style={{
     fontSize:60,
@@ -84,11 +98,11 @@ return (
     WebkitBackgroundClip:"text",
     WebkitTextFillColor:"transparent"
   }}>
-    Build a winning store in minutes
+    Build a winning store in 60 seconds
   </h1>
 
   <p style={{color:"#cbd5f5", marginTop:20}}>
-    AI generates your entire Shopify store instantly
+    AI finds, builds, and launches your Shopify store instantly
   </p>
 
   <button
@@ -97,6 +111,54 @@ return (
   >
     🚀 Try for FREE
   </button>
+
+  {/* TRUST BADGE */}
+  <div style={{
+    marginTop:20,
+    opacity:0.7,
+    fontSize:14
+  }}>
+    ✔ No coding • ✔ Beginner friendly • ✔ Cancel anytime
+  </div>
+
+</div>
+
+{/* DEMO SECTION (UPGRADED) */}
+<div style={section}>
+<h2 style={{fontSize:32, marginBottom:20}}>See it in action</h2>
+
+<div style={{
+  ...card,
+  textAlign:"center",
+  overflow:"hidden",
+  position:"relative"
+}}>
+
+{/* Fake animated preview */}
+<div style={{
+  height:200,
+  borderRadius:12,
+  background:"linear-gradient(135deg,#0f172a,#1e293b)",
+  display:"flex",
+  alignItems:"center",
+  justifyContent:"center",
+  fontSize:14,
+  color:"#94a3b8",
+  marginBottom:20
+}}>
+  🔥 Live AI Store Preview Loading...
+</div>
+
+<p>Paste product → AI builds → Launch instantly</p>
+
+<button
+style={{...buttonPrimary, marginTop:20}}
+onClick={()=>router.push("/generator")}
+>
+Try Demo
+</button>
+
+</div>
 </div>
 
 {/* FEATURES */}
@@ -105,7 +167,7 @@ return (
 
 <div style={{
   display:"grid",
-  gridTemplateColumns:"repeat(3,1fr)",
+  gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",
   gap:20
 }}>
 
@@ -116,30 +178,40 @@ return (
 
 <div style={card}>
 <h3>🎯 High Conversion</h3>
-<p>Optimized for sales and performance.</p>
+<p>Optimized layouts that actually sell.</p>
 </div>
 
 <div style={card}>
 <h3>🤖 AI Powered</h3>
-<p>Product, copywriting & layout done for you.</p>
+<p>Product, copywriting & design done for you.</p>
+</div>
+
+<div style={card}>
+<h3>📈 Winning Products</h3>
+<p>AI helps identify profitable items.</p>
+</div>
+
+<div style={card}>
+<h3>🛒 Shopify Ready</h3>
+<p>Export directly to your store.</p>
+</div>
+
+<div style={card}>
+<h3>🚀 Fast Launch</h3>
+<p>Go live in minutes, not days.</p>
 </div>
 
 </div>
 </div>
 
-{/* DEMO */}
+{/* HOW IT WORKS */}
 <div style={section}>
-<h2 style={{fontSize:32, marginBottom:20}}>See it in action</h2>
+<h2 style={{fontSize:32, marginBottom:30}}>How it works</h2>
 
-<div style={{...card, textAlign:"center"}}>
-<p>Paste product → AI builds store → ready to sell</p>
-
-<button
-style={{...buttonPrimary, marginTop:20}}
-onClick={()=>router.push("/generator")}
->
-Try Demo
-</button>
+<div style={{display:"flex", flexDirection:"column", gap:20}}>
+<div>1. Paste product link</div>
+<div>2. AI builds your store</div>
+<div>3. Launch & start selling</div>
 </div>
 </div>
 
@@ -149,7 +221,7 @@ Try Demo
 
 <div style={{
   display:"grid",
-  gridTemplateColumns:"repeat(3,1fr)",
+  gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",
   gap:20
 }}>
 
@@ -172,6 +244,25 @@ Try Demo
 </div>
 
 </div>
+
+{/* STRIPE TRUST */}
+<div style={{
+marginTop:40,
+display:"flex",
+justifyContent:"center"
+}}>
+<div style={{
+padding:"10px 20px",
+border:"1px solid rgba(255,255,255,0.1)",
+borderRadius:999,
+background:"rgba(255,255,255,0.03)",
+fontSize:14,
+opacity:0.8
+}}>
+🔒 Secured by Stripe
+</div>
+</div>
+
 </div>
 
 {/* FAQ */}
@@ -198,12 +289,12 @@ Try Demo
 </div>
 </div>
 
-{/* FOOTER CTA */}
+{/* FINAL CTA */}
 <div style={{
   textAlign:"center",
   padding:80
 }}>
-<h2>Start building your store now</h2>
+<h2>Start building your first profitable store today</h2>
 
 <button
 style={buttonPrimary}

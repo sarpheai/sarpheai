@@ -58,6 +58,30 @@ return { score, verdict, reasons }
 
 }
 
+/* 🔥 NEW: IMAGE SCORING (ADDED ONLY, DOESN'T BREAK LOGIC) */
+function scoreImage(img:string){
+let score = 0
+
+if(img.includes("alicdn")) score += 30
+if(img.includes("ae01")) score += 25
+if(img.includes("amazon")) score += 20
+if(img.includes("ebay")) score += 20
+
+if(img.match(/800|1000|1200|1600/)) score += 20
+
+if(img.includes("product")) score += 15
+
+if(img.includes("icon")) score -= 50
+if(img.includes("logo")) score -= 50
+if(img.includes("avatar")) score -= 50
+if(img.includes("thumbnail")) score -= 40
+if(img.includes("sprite")) score -= 40
+if(img.includes("banner")) score -= 30
+if(img.includes("ads")) score -= 30
+
+return score
+}
+
 export async function POST(req: Request) {
 
 try{
@@ -68,7 +92,7 @@ if(!url){
   return Response.json({ error:"No URL provided" })
 }
 
-/* 🔥 FIXED AXIOS */
+/* 🔥 AXIOS */
 const response = await axios.get(url,{
 timeout:15000,
 maxRedirects:5,
@@ -116,7 +140,7 @@ price = json.offers.price
 }catch{}
 })
 
-/* 🔥 DEEP SCRAPE FIXED */
+/* 🔥 SCRIPT SCRAPING */
 $("script").each((_, el) => {
 
 const content = $(el).html()
@@ -124,8 +148,8 @@ if(!content) return
 
 try{
 
-/* 🔥 ALIEXPRESS FIX (UPGRADED) */
-if(content.includes("runParams") || content.includes("window.runParams")){
+/* 🔥 ALIEXPRESS */
+if(content.includes("runParams")){
 
 const match = content.match(/runParams\s*=\s*(\{[\s\S]*?\})\s*;/)
 
@@ -162,12 +186,12 @@ images.push(...product.imageModule.imageList.map((i:any)=>i?.url).filter(Boolean
 
 }
 
-/* EBAY FIX (UPGRADED HD) */
+/* EBAY */
 const ebayImages = content.match(/"imageUrl":"(https:[^"]+)"/g)
 if(ebayImages){
 ebayImages.forEach(img=>{
 let clean = img.replace(/"imageUrl":"|"/g,"")
-clean = clean.replace(/s-l\d+/g,"s-l1600") // 🔥 force HD
+clean = clean.replace(/s-l\d+/g,"s-l1600")
 images.push(clean)
 })
 }
@@ -175,7 +199,7 @@ images.push(clean)
 }catch{}
 })
 
-/* IMG TAG */
+/* IMG TAG (KEEP ORIGINAL LOGIC) */
 $("img").each((_,el)=>{
 let src = $(el).attr("src") || $(el).attr("data-src")
 if(!src) return
@@ -188,7 +212,7 @@ images.push(src)
 }
 })
 
-/* 🔥 ULTRA CLEAN + HD FIX */
+/* 🔥 CLEAN + ENHANCED FILTER (SAFE UPGRADE) */
 images = [...new Set(images)].map(img=>{
 let fixed = img.trim()
 
@@ -219,14 +243,20 @@ img.startsWith("http") &&
 !img.includes("base64")
 )
 
-/* 🔥 REMOVE BLUR / LOW QUALITY */
+/* 🔥 NEW: SMART SORT (ADDED ONLY) */
+images = images
+.map(img => ({ url: img, score: scoreImage(img) }))
+.sort((a,b)=> b.score - a.score)
+.map(i => i.url)
+
+/* REMOVE BLUR */
 images = images.filter(img =>
 !img.includes("blur") &&
 !img.includes("lazy") &&
 !img.includes("default")
 )
 
-/* 🧠 FALLBACK SYSTEM */
+/* FALLBACK */
 const isBadData =
 !title ||
 title.length < 5 ||
@@ -244,7 +274,7 @@ if(ogImg) images.push(ogImg)
 
 }
 
-/* 🔥 FINAL SAFETY */
+/* FINAL SAFETY */
 if(images.length === 0){
 images.push("https://images.unsplash.com/photo-1601758064221-0c5f8bcb0d5d")
 }
@@ -253,13 +283,13 @@ if(!price){
 price = "$29.99"
 }
 
-/* 🔥 FINAL CLEAN (REAL PRODUCT ONLY) */
-const finalImages = images.slice(0,6)
+/* LIMIT */
+const finalImages = images.slice(0,5)
 
 /* SCORE */
 const scoring = calculateScore(title, price, finalImages)
 
-/* 🔥 UI COLOR SYSTEM (MATCH YOUR LANDING) */
+/* THEME */
 const theme = {
 primary: "#38bdf8",
 accent: "#6366f1",

@@ -140,33 +140,6 @@ let rankedImages = cleanImages
 .sort((a,b)=> b.score - a.score)
 .map(i => i.url)
 
-/* 🔥 ADD: FORCE 4 PRODUCT GALLERY IMAGES */
-let finalImages = rankedImages.filter(img =>
-img &&
-!img.includes("icon") &&
-!img.includes("logo") &&
-!img.includes("sprite") &&
-!img.includes("gif") &&
-!img.includes("loading") &&
-!img.includes("placeholder") &&
-!img.includes("data:image") &&
-!img.includes("base64")
-)
-
-finalImages = finalImages.slice(0,4)
-
-if(finalImages.length < 4){
-
-const fallback = [
-"https://images.unsplash.com/photo-1583511655826-05700442b31b",
-"https://images.unsplash.com/photo-1601758125946-6ec2ef64daf8",
-"https://images.unsplash.com/photo-1583337130417-3346a1c8f6a6",
-"https://images.unsplash.com/photo-1558788353-f76d92427f16"
-]
-
-finalImages = [...finalImages, ...fallback].slice(0,4)
-}
-
 /* 🔥 NEW FEATURE: SCORING */
 const scoring = calculateScore(product, price, rankedImages)
 
@@ -179,7 +152,7 @@ rankedImages[2] ||
 "https://images.unsplash.com/photo-1601758064221-0c5f8bcb0d5d"
 
 /* FINAL GALLERY */
-images = finalImages
+images = rankedImages.slice(0, 20)
 
 /* GLOBAL STYLE */
 const baseStyle = `
@@ -221,20 +194,13 @@ margin-right:10px;
 }
 
 .secondary-btn{
-background:linear-gradient(135deg,#38bdf8,#6366f1);
-border:none;
-color:white;
+background:#0f172a;
+border:1px solid #38bdf8;
+color:#38bdf8;
 padding:16px 32px;
 border-radius:10px;
 font-weight:600;
 font-size:16px;
-box-shadow:0 8px 25px rgba(99,102,241,0.4);
-transition:0.25s;
-}
-
-.secondary-btn:hover{
-transform:scale(1.05);
-box-shadow:0 10px 30px rgba(99,102,241,0.6);
 }
 
 /* 🔥 HERO LAYOUT */
